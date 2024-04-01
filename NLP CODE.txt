@@ -1,0 +1,68 @@
+https://www.overleaf.com/project/6530298551adb3134e82fd44
+
+NLP CODE
+
+!pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+
+!pip install transformers requests beautifulsoup4 pandas numpy
+
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+import torch
+import requests
+from bs4 import BeautifulSoup
+import re
+
+tokenizer = AutoTokenizer.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
+model = AutoModelForSequenceClassification.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')
+
+tokens = tokenizer.encode("This restaurant never disappoints. We decided to have lunch here today and let me tell you it was an absolute amazing treat. If you have not tried this restaurant, do yourself a favor and give it a try. Excellent, atmosphere, amazing food.", return_tensors='pt')
+tokens[0]
+
+tokenizer.decode(tokens[0])
+
+result = model(tokens)
+result.logits
+
+int(torch.argmax(result.logits))+1
+
+
+import numpy as np
+import pandas as pd
+
+path='/content/DataSet_Merged.xlsx'
+dataset = pd.read_excel(path)
+
+dataset
+
+df = dataset[['REVIEW']]
+df
+
+df["REVIEW"].iloc[0]
+
+def sentiment_score(review):
+    tokens = tokenizer.encode(review, return_tensors='pt')
+    result = model(tokens)
+    return int(torch.argmax(result.logits))+1
+
+sentiment_score(df['REVIEW'].iloc[1])
+
+df['sentiment'] = df['REVIEW'].apply(lambda x: sentiment_score(x[:512]))
+df
+
+# Assuming your DataFrame is named 'df'
+# Create a function to classify sentiments
+def classify_sentiment(score):
+    if score in [1, 2]:
+        return 'Negative'
+    elif score == 3:
+        return 'Neutral'
+    elif score in [4, 5]:
+        return 'Positive'
+    else:
+        return 'Undefined'  # If there are other scores not specified
+
+# Apply the function to create the 'Sentiment_Class' column
+df['Sentiment_Class'] = df['sentiment'].apply(classify_sentiment)
+
+# Save the updated DataFrame to an Excel file
+df.to_excel('Final_Analysis.xlsx', index=False)
